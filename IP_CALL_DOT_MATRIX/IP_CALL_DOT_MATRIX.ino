@@ -3,7 +3,7 @@
 #include <fonts/Arial_Black_16.h>
 
 //SETUP DMD
-#define DISPLAYS_WIDE 6 // Kolom Panel
+#define DISPLAYS_WIDE 3 // Kolom Panel
 #define DISPLAYS_HIGH 1 // Baris Panel
 DMDESP Disp(DISPLAYS_WIDE, DISPLAYS_HIGH);  // Jumlah Panel P10 yang digunakan (KOLOM,BARIS)
 
@@ -20,10 +20,10 @@ DMDESP Disp(DISPLAYS_WIDE, DISPLAYS_HIGH);  // Jumlah Panel P10 yang digunakan (
 
 //////////////////////////////////////////////
 
-String ssid = "";
-String password = "";
+String ssid = "Net_4X8G7L2M9K5_7";
+String password = "ipcall123";
 String id = "running_text_1";
-String NURSESTATION = "1";
+String NURSESTATION;
 
 String SSID_NURSESTATION_1[] = {
   "Net_4X8G7L2M9K5_1",
@@ -80,6 +80,7 @@ bool mqttconnected = false;
 bool firstmqttconnect = true;
 u_long timeSendActivation = 0;
 u_long beforeResetWifi = 0;
+u_long reset1hari = 0;
 
 int counter_reset_wifi = 0;
 int counter_reset_mqtt = 0;
@@ -484,6 +485,7 @@ void loop(void)
   }
 
   if(lenmsg != 0) {
+    Serial.println(lenmsg);
     TeksJalan(0, speed); 
   }
 
@@ -519,6 +521,33 @@ void loop(void)
   if(counter_reset_mqtt > 10){
     ESP.reset();
   }
+
+
+  if(mqttconnected && lenmsg == 0){
+    // if(firstmqttconnect) {
+    //   digitalWrite(BED_LED_CANCEL, HIGH);
+    //   delay(100);
+    //   digitalWrite(BED_LED_CANCEL, LOW);
+    //   delay(100);
+    //   digitalWrite(BED_LED_CANCEL, HIGH);
+    //   delay(100);
+    //   digitalWrite(BED_LED_CANCEL, LOW);
+    //   firstmqttconnect = false;
+    // }
+
+    if(millis() - timeSendActivation > 30000){
+      mqttClient.subscribe(id.c_str(), 1);
+      mqttClient.publish("aktif", 0, false, id.c_str());
+      timeSendActivation = millis();
+    }
+  } 
+
+
+  if (millis() > 86400000){
+    ESP.reset();
+  }
+
+
 
 }
 

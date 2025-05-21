@@ -858,7 +858,8 @@ void loop() {
       ESP.reset();
     }
 
-    if(millis() - reset_3_hari > 604800000) {
+    // satu hari
+    if(millis() - reset_3_hari > 86400000) {
       ESP.reset();
     }
 }

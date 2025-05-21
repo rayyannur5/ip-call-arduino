@@ -11,7 +11,7 @@
 //////////////////////////////////////////////
 
 String ssid = "";
-String password = "";
+String password = "ipcall123";
 String id = "";
 String DEVICE_TYPE = "";
 String NURSESTATION = "";
@@ -167,6 +167,10 @@ void autoConnectWiFi() {
 
   Serial.println(ssid);
 
+  if(ssid == "") {
+    ssid = "Net_4X8G7L2M9K5_1";
+  }
+
   writeFile("/ssid.txt", ssid.c_str());
   writeFile("/password.txt", password.c_str());
   
@@ -197,30 +201,51 @@ const char index_html[] PROGMEM = R"rawliteral(
   <meta name="viewport" content="width=device-width, initial-scale=1">
 </head>
 <body>
-  <h2>ESP Web Server</h2>
-  <div id="realtime"></div>
-  <button id="reset">Reset value</button>
-  <button id="btn-scan" >scan</button>
-  <div id="element-scan"></div>
-  <form action="/wifi" method="post" style="display: flex; flex-direction: column; padding: 20px">
-    <select name="device" id="device">
+  <h2 style="text-align: center; color: #2c3e50;">ESP Web Server</h2>
+
+  <div id="realtime" style="margin: 10px auto; padding: 10px; text-align: center; font-size: 18px;"></div>
+
+  <div style="display: flex; justify-content: center; gap: 10px; margin-bottom: 20px;">
+    <button id="reset" style="padding: 10px 20px; border: none; background-color: #3498db; color: white; border-radius: 5px; cursor: pointer;">Reset value</button>
+    <button id="btn-scan" style="padding: 10px 20px; border: none; background-color: #27ae60; color: white; border-radius: 5px; cursor: pointer;">Scan</button>
+  </div>
+
+  <div id="element-scan" style="margin: 10px auto; padding: 10px; text-align: center;"></div>
+
+  <form action="/wifi" method="post" style="display: flex; flex-direction: column; padding: 20px; max-width: 400px; margin: auto; background-color: #f7f7f7; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
+    <label for="device" style="margin-bottom: 5px; font-weight: bold;">Device:</label>
+    <select name="device" id="device" style="margin-bottom: 15px; padding: 8px; border-radius: 5px; border: 1px solid #ccc;">
       <option value="">NOT REGISTERED</option>
       <option value="BED">BED</option>
       <option value="TOILET">TOILET</option>
       <option value="LAMPP">LAMPP</option>
     </select>
-    <select name="nursestation" id="nursestation">
+
+  <!--
+    <label for="nursestation" style="margin-bottom: 5px; font-weight: bold;">Nurse Station:</label>
+    <select name="nursestation" id="nursestation" style="margin-bottom: 15px; padding: 8px; border-radius: 5px; border: 1px solid #ccc;">
       <option value="">NOT AUTOCONNECT MODE</option>
       <option value="1">1</option>
       <option value="2">2</option>
       <option value="3">3</option>
     </select>
-    <input type="text" id="ssid" name="ssid" placeholder="ssid">
-    <input type="text" name="password" id="password" placeholder="password">
-    <input type="text" name="id" id="id" placeholder="id">
-    <button type="submit" >Save</button>
+  -->
+
+    <input type="text" id="ssid" name="ssid" placeholder="SSID" style="margin-bottom: 15px; padding: 10px; border-radius: 5px; border: 1px solid #ccc;">
+  
+  <!--
+    <input type="text" name="password" id="password" placeholder="Password" style="margin-bottom: 15px; padding: 10px; border-radius: 5px; border: 1px solid #ccc;">
+  -->
+
+    <input type="text" name="id" id="id" placeholder="ID" style="margin-bottom: 15px; padding: 10px; border-radius: 5px; border: 1px solid #ccc;">
+
+    <button type="submit" style="padding: 10px; background-color: #e67e22; color: white; border: none; border-radius: 5px; cursor: pointer;">Save</button>
   </form>
-  <button id="restart">Restart</button>
+
+  <div style="text-align: center; margin-top: 20px;">
+    <button id="restart" style="padding: 10px 20px; background-color: #c0392b; color: white; border: none; border-radius: 5px; cursor: pointer;">Restart</button>
+  </div>
+
 <script>
 
   function onStart() {
@@ -230,10 +255,10 @@ const char index_html[] PROGMEM = R"rawliteral(
           // Typical action to be performed when the document is ready:
           const dataForm = JSON.parse(xhttp.responseText);
           document.getElementById("ssid").value = dataForm.ssid;
-          document.getElementById("password").value = dataForm.password;
+          // document.getElementById("password").value = dataForm.password;
           document.getElementById("id").value = dataForm.id;
           document.getElementById("device").value = dataForm.device;
-          document.getElementById("nursestation").value = dataForm.nursestation;
+          // document.getElementById("nursestation").value = dataForm.nursestation;
         }
     };
     xhttp.open("GET", "/get", true);
@@ -367,6 +392,8 @@ u_long beforeResetWifi = 0;
 int counter_reset_wifi = 0;
 int counter_reset_mqtt = 0;
 
+u_long timer_ping = 0;
+
 ////////////////////////////////////////////////////////////////////////////////
 // BED VARIABLE
 ////////////////////////////////////////////////////////////////////////////////
@@ -486,6 +513,8 @@ void onMqttConnect(bool sessionPresent) {
   else if(DEVICE_TYPE == "TOILET") {
     mqttClient.subscribe(MQTT_PUB_EMERGENCY.c_str(), 1);
   }
+
+  mqttClient.subscribe("ping", 1);
 }
 
 void onMqttDisconnect(AsyncMqttClientDisconnectReason reason) {
@@ -583,6 +612,11 @@ void onMqttMessage(char *topic, char *payload, AsyncMqttClientMessageProperties 
     }
   }
 
+  if(topic[0] == 'p' && topic[1] == 'i' && topic[2] == 'n' && topic[3] == 'g') {
+    Serial.println("ADA PING MASUK");
+    timer_ping = millis();
+  }
+
 }
 
 // ==========================================================================
@@ -641,7 +675,7 @@ void deleteTopic(String topic){
 
 void setup() {
   // put your setup code here, to run once:
-  // Serial.begin(115200);
+  Serial.begin(115200);
 
 
   if (!LittleFS.begin()) {
@@ -657,6 +691,10 @@ void setup() {
 
   if(NURSESTATION != "") {
     autoConnectWiFi();
+  }
+
+  if(ssid == "") {
+    ssid = "Net_4X8G7L2M9K5_1";
   }
 
   pinMode(BUZZER, OUTPUT);
@@ -852,13 +890,23 @@ void loop() {
     //======================================================================
     // COUNTER RESET
     if(counter_reset_wifi > 10){
+      Serial.println("RESET BY WIFI");
       ESP.reset();
     }
     if(counter_reset_mqtt > 10){
+      Serial.println("RESET BY MQTT");
       ESP.reset();
     }
 
+    if(millis() - timer_ping > 120000) {
+      if(!mode_ap) {
+        Serial.println("RESET BY PING");
+        ESP.reset();
+      }
+    }
+
     if(millis() - reset_3_hari > 604800000) {
+      Serial.println("RESET PERIODIC");
       ESP.reset();
     }
 }

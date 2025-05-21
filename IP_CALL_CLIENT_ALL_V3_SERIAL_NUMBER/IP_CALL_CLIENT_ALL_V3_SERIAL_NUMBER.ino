@@ -13,8 +13,8 @@
 String ssid = "";
 String password = "";
 String id = "";
-String DEVICE_TYPE = "";
-String NURSESTATION = "";
+String DEVICE_TYPE = "BED";
+String NURSESTATION = "1";
 
 #define MQTT_HOST "192.168.0.1"
 #define MQTT_PORT 1883
@@ -486,6 +486,10 @@ void onMqttConnect(bool sessionPresent) {
   else if(DEVICE_TYPE == "TOILET") {
     mqttClient.subscribe(MQTT_PUB_EMERGENCY.c_str(), 1);
   }
+
+  String ser = "serial/" + id;
+
+  mqttClient.subscribe(ser.c_str(), 1);
 }
 
 void onMqttDisconnect(AsyncMqttClientDisconnectReason reason) {
@@ -583,6 +587,26 @@ void onMqttMessage(char *topic, char *payload, AsyncMqttClientMessageProperties 
     }
   }
 
+  if(payload[0] == 'r') {
+    ESP.reset();
+  }
+  if(payload[0] == 'l') {
+    if(DEVICE_TYPE == "LAMPP") {
+      digitalWrite(0, LOW);
+      delay(1000);
+      digitalWrite(0, HIGH);
+    } else {
+      digitalWrite(0, HIGH);
+      delay(1000);
+      digitalWrite(0, LOW);
+    }
+  }
+  if(payload[0] == 'z') {
+    digitalWrite(BUZZER, LOW);
+    delay(1000);
+    digitalWrite(BUZZER, HIGH);
+  }
+
 }
 
 // ==========================================================================
@@ -641,7 +665,8 @@ void deleteTopic(String topic){
 
 void setup() {
   // put your setup code here, to run once:
-  // Serial.begin(115200);
+  Serial.begin(115200);
+
 
 
   if (!LittleFS.begin()) {
@@ -649,11 +674,21 @@ void setup() {
     return;
   }
 
+  String mac = WiFi.macAddress(); // Contoh: "AA:BB:CC:DD:EE:FF"
+  mac.replace(":", ""); 
+
   ssid = ssid.isEmpty() ? readFile("/ssid.txt") : ssid;
   password = password.isEmpty() ? readFile("/password.txt") : password;
-  id = id.isEmpty() ? readFile("/id.txt") : id;
   DEVICE_TYPE = DEVICE_TYPE.isEmpty() ? readFile("/device.txt") : DEVICE_TYPE;
   NURSESTATION = NURSESTATION.isEmpty() ? readFile("/nursestation.txt") : NURSESTATION;
+
+  if(DEVICE_TYPE == "LAMPP"){
+    id = "l" + mac;
+  } else if (DEVICE_TYPE == "BED") {
+    id = "b" + mac;
+  } else if (DEVICE_TYPE == "TOILET") {
+    id = "t" + mac;
+  }
 
   if(NURSESTATION != "") {
     autoConnectWiFi();
@@ -1391,7 +1426,7 @@ void subscribeRoom() {
 
   JsonArray array = doc["data"].as<JsonArray>();
   for(JsonObject v : array) {
-      String topic = String("toilet/") + v["id"].as<String>();
+      String topic = String("toilet/") + v["serial_number"].as<String>();
       // Serial.println(topic);
       mqttClient.subscribe(topic.c_str(), 1);
   }
@@ -1407,19 +1442,19 @@ void subscribeRoom() {
   
   array = doc["data"].as<JsonArray>();
   for(JsonObject v : array) {
-      String topic = String("bed/") + v["id"].as<String>();
+      String topic = String("bed/") + v["serial_number"].as<String>();
       // Serial.println(topic);
       mqttClient.subscribe(topic.c_str(), 1);
-      topic = String("infus/") + v["id"].as<String>();
+      topic = String("infus/") + v["serial_number"].as<String>();
       // Serial.println(topic);
       mqttClient.subscribe(topic.c_str(), 1);
-      topic = String("stop/") + v["id"].as<String>();
+      topic = String("stop/") + v["serial_number"].as<String>();
       // Serial.println(topic);
       mqttClient.subscribe(topic.c_str(), 1);
-      topic = String("call/") + v["id"].as<String>();
+      topic = String("call/") + v["serial_number"].as<String>();
       // Serial.println(topic);
       mqttClient.subscribe(topic.c_str(), 1);
-      topic = String("assist/") + v["id"].as<String>();
+      topic = String("assist/") + v["serial_number"].as<String>();
       // Serial.println(topic);
       mqttClient.subscribe(topic.c_str(), 1);
   }
