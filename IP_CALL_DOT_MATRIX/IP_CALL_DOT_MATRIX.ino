@@ -3,7 +3,7 @@
 #include <fonts/Arial_Black_16.h>
 
 //SETUP DMD
-#define DISPLAYS_WIDE 3 // Kolom Panel
+#define DISPLAYS_WIDE 6 // Kolom Panel
 #define DISPLAYS_HIGH 1 // Baris Panel
 DMDESP Disp(DISPLAYS_WIDE, DISPLAYS_HIGH);  // Jumlah Panel P10 yang digunakan (KOLOM,BARIS)
 
@@ -20,7 +20,7 @@ DMDESP Disp(DISPLAYS_WIDE, DISPLAYS_HIGH);  // Jumlah Panel P10 yang digunakan (
 
 //////////////////////////////////////////////
 
-String ssid = "Net_4X8G7L2M9K5_7";
+String ssid = "Net_4X8G7L2M9K5_11";
 String password = "ipcall123";
 String id = "running_text_1";
 String NURSESTATION;
@@ -98,7 +98,10 @@ bool state_buzzer_ap = false;
 unsigned long time_buzzer_ap = 0;
 unsigned long waiting_setting = 0;
 
-#define BUZZER 2 // D4
+#define BUZZER D4 // D4
+
+bool state_buzzer = false;
+u_long timer_buzzer = 0;
 
 AsyncWebServer server(80);
 
@@ -455,7 +458,7 @@ void setup(void)
 
   pinMode(BUZZER, OUTPUT);
 
-  digitalWrite(BUZZER, HIGH);
+  digitalWrite(BUZZER, 0);
 
   Disp.start(); // Jalankan library DMDESP
   Disp.setBrightness(brightness); // Tingkat kecerahan
@@ -478,15 +481,26 @@ void setup(void)
 void loop(void)
 {
   Disp.loop();
-  if(mqttconnected){
-    digitalWrite(2, LOW);
-  } else {
-    digitalWrite(2, HIGH);
-  }
+  // if(mqttconnected){
+  //   digitalWrite(2, LOW);
+  // } else {
+  //   digitalWrite(2, HIGH);
+  // }
 
   if(lenmsg != 0) {
-    Serial.println(lenmsg);
+    // Serial.println(lenmsg);
     TeksJalan(0, speed); 
+
+    // if(millis() - timer_buzzer > 2000){
+    //   state_buzzer = !state_buzzer;
+    //   digitalWrite(BUZZER, state_buzzer);
+    //   timer_buzzer = millis();
+    //   Serial.println("TES BUZZER");
+    //   Serial.println(state_buzzer);
+    // }
+  } else {
+    // state_buzzer = false;
+    // digitalWrite(BUZZER, 0);
   }
 
   if(Serial.available()){
@@ -541,6 +555,7 @@ void loop(void)
       timeSendActivation = millis();
     }
   } 
+  
 
 
   if (millis() > 86400000){
