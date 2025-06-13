@@ -312,10 +312,10 @@ const char index_html[] PROGMEM = R"rawliteral(
 )rawliteral";
 
 // BUZZER DEMO
-// #define BUZZER D1
+#define BUZZER D1
 
 // BUZZER
-#define BUZZER 2 // D4
+// #define BUZZER 2 // D4
 
 // BED DEMO
 // #define BED_PIN_ASSIST D2

@@ -491,7 +491,9 @@ void deleteTopic(String topic){
 
 void setup() {
   // put your setup code here, to run once:
-  // Serial.begin(115200);
+  Serial.begin(115200);
+
+  Serial.println("tesss");
 
 
   // if (!LittleFS.begin()) {
@@ -547,10 +549,11 @@ void setup() {
     pinMode(BTN_UNREGISTERED, INPUT_PULLUP);
   }
 
-  mqttReconnectTimer = xTimerCreate("mqttTimer", pdMS_TO_TICKS(2000), pdFALSE, (void*)0, reinterpret_cast<TimerCallbackFunction_t>(connectToMqtt));
-  wifiReconnectTimer = xTimerCreate("wifiTimer", pdMS_TO_TICKS(2000), pdFALSE, (void*)0, reinterpret_cast<TimerCallbackFunction_t>(connectToWifi));
+  // mqttReconnectTimer = xTimerCreate("mqttTimer", pdMS_TO_TICKS(2000), pdFALSE, (void*)0, reinterpret_cast<TimerCallbackFunction_t>(connectToMqtt));
+  // wifiReconnectTimer = xTimerCreate("wifiTimer", pdMS_TO_TICKS(2000), pdFALSE, (void*)0, reinterpret_cast<TimerCallbackFunction_t>(connectToWifi));
 
-  WiFi.onEvent(WiFiEvent);
+  
+  // WiFi.onEvent(WiFiEvent);
   
   mqttClient.onConnect(onMqttConnect);
   mqttClient.onDisconnect(onMqttDisconnect);
