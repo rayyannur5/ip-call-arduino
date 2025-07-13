@@ -20,7 +20,7 @@ DMDESP Disp(DISPLAYS_WIDE, DISPLAYS_HIGH);  // Jumlah Panel P10 yang digunakan (
 
 //////////////////////////////////////////////
 
-String ssid = "Net_4X8G7L2M9K5_11";
+String ssid = "Net_4X8G7L2M9K5_1";
 String password = "ipcall123";
 String id = "running_text_1";
 String NURSESTATION;
@@ -90,6 +90,8 @@ int lenmsg = 0;
 int speed = 30;
 int brightness = 20;
 bool running = false;
+
+u_long timer_ping = 0;
 
 DynamicJsonDocument doc(1024);
 
@@ -362,6 +364,7 @@ void onMqttConnect(bool sessionPresent) {
   
   if(id != "") {
     mqttClient.subscribe(id.c_str(), 1);
+    mqttClient.subscribe("ping", 1);
   }
 
 }
@@ -397,35 +400,42 @@ void onMqttMessage(char *topic, char *payload, AsyncMqttClientMessageProperties 
   Serial.print("  payload: ");
   Serial.println(payload);
 
-  if(running == false) {
+  if(topic[0] == 'p' && topic[1] == 'i' && topic[2] == 'n' && topic[3] == 'g') {
+    Serial.println("ADA PING MASUK");
+    timer_ping = millis();
+  } else {
 
-    char buffer[4];
-    char buffer_brightness[4];
+    if(running == false) {
 
-    for(int i = 0; i < len; i++) {
-      if(i < 3) {
-        buffer[i] = payload[i];
-      }else if (i < 6 && i >= 3) {
-        buffer_brightness[i - 3] = payload[i];
+      char buffer[4];
+      char buffer_brightness[4];
+
+      for(int i = 0; i < len; i++) {
+        if(i < 3) {
+          buffer[i] = payload[i];
+        }else if (i < 6 && i >= 3) {
+          buffer_brightness[i - 3] = payload[i];
+        }
+        else {
+          msg[i - 6] = payload[i];
+        }
       }
-       else {
-        msg[i - 6] = payload[i];
+
+      buffer[3] = '\0';
+      buffer_brightness[3] = '\0';
+
+      lenmsg = len;
+
+      speed = atoi(&buffer[0]);
+      brightness = atoi(&buffer_brightness[0]);
+
+      Disp.setBrightness(brightness);
+
+      if(payload[0] == 'x') {
+        lenmsg = 0;
       }
     }
 
-    buffer[3] = '\0';
-    buffer_brightness[3] = '\0';
-
-    lenmsg = len;
-
-    speed = atoi(&buffer[0]);
-    brightness = atoi(&buffer_brightness[0]);
-
-    Disp.setBrightness(brightness);
-
-    if(payload[0] == 'x') {
-      lenmsg = 0;
-    }
   }
 
 
@@ -454,6 +464,20 @@ void setup(void)
     autoConnectWiFi();
   }
 
+  // Set your Static IP address
+    IPAddress local_IP(192, 168, 0, 9);
+    // Set your Gateway IP address
+    IPAddress gateway(192, 168, 0, 254);
+
+    IPAddress subnet(255, 255, 255, 0);
+    IPAddress primaryDNS(8, 8, 8, 8);   //optional
+    IPAddress secondaryDNS(8, 8, 4, 4);
+
+    if (!WiFi.config(local_IP, gateway, subnet, primaryDNS, secondaryDNS)) {
+      Serial.println("STA Failed to configure");
+    }
+
+
 
 
   pinMode(BUZZER, OUTPUT);
@@ -477,6 +501,9 @@ void setup(void)
 
   connectToWifi();
 }
+
+bool state_blink = false;
+u_long millis_blink = 0;
 
 void loop(void)
 {
@@ -536,6 +563,31 @@ void loop(void)
     ESP.reset();
   }
 
+  if(mqttconnected && lenmsg == 0) {
+    if(millis() - millis_blink > 1000) {
+      if (state_blink) {
+        Disp.drawText(0,0, ".");
+      } else {
+        Disp.drawText(0,0, " ");
+      }
+
+      state_blink = !state_blink;
+      millis_blink = millis();
+    }
+  } 
+  
+  if (mqttconnected == false) {
+    if(millis() - millis_blink > 400) {
+      if (state_blink) {
+        Disp.drawText(0,0, ".");
+      } else {
+        Disp.drawText(0,0, " ");
+      }
+      state_blink = !state_blink;
+      millis_blink = millis();
+    }
+  }
+
 
   if(mqttconnected && lenmsg == 0){
     // if(firstmqttconnect) {
@@ -549,12 +601,25 @@ void loop(void)
     //   firstmqttconnect = false;
     // }
 
+    
     if(millis() - timeSendActivation > 30000){
       mqttClient.subscribe(id.c_str(), 1);
+      mqttClient.subscribe("ping", 1);
       mqttClient.publish("aktif", 0, false, id.c_str());
       timeSendActivation = millis();
     }
   } 
+
+
+  // RESET BY PING
+  if(millis() - timer_ping > 120000) {
+    if(!mode_ap) {
+      Serial.println("RESET BY PING");
+      WiFi.disconnect(true);
+      delay(1000);
+      ESP.restart();
+    }
+  }
   
 
 

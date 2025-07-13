@@ -94,7 +94,7 @@ class Tombol {
         }
 
         // Cek untuk aksi tahan 10 detik
-        if (!_aksi10sTerpicu && durasiTahan >= 10000) {
+        if (!_aksi10sTerpicu && durasiTahan >= 7000) {
           if (_fungsiAksiTahan10s != nullptr) {
             // Serial.print("[Tombol di Pin "); Serial.print(_pinTombol); Serial.println("]: Aksi TAHAN 10 DETIK terpicu!");
             _fungsiAksiTahan10s();
@@ -103,7 +103,7 @@ class Tombol {
         }
         
         // Cek untuk aksi tahan 30 detik
-        if (!_aksi30sTerpicu && durasiTahan >= 30000) {
+        if (!_aksi30sTerpicu && durasiTahan >= 15000) {
           if (_fungsiAksiTahan30s != nullptr) {
             // Serial.print("[Tombol di Pin "); Serial.print(_pinTombol); Serial.println("]: Aksi TAHAN 30 DETIK terpicu!");
             _fungsiAksiTahan30s();
@@ -182,7 +182,7 @@ DynamicJsonDocument doc(1024);
 
 ////////////////////////////////////////////////
 
-#define BUZZER 2 
+#define BUZZER    2
 #define ANALOGPIN A0
 #define BTN_SETUP D1
 
@@ -197,6 +197,20 @@ Tombol btn_setup(BTN_SETUP, BUZZER);
 #define LAMPP_LED_kuning 	D7
 #define LAMPP_BTN_SETUP 	14 // D5
 
+// // LAMPP DEMO 1
+// #define LAMPP_LED_merah   D5
+// #define LAMPP_LED_hijau   D7
+// #define LAMPP_LED_biru    D2
+// #define LAMPP_LED_kuning  D7
+// #define LAMPP_BTN_SETUP   D5
+
+// LAMPP DEMO 2
+// #define LAMPP_LED_merah   D5
+// #define LAMPP_LED_hijau   D5
+// #define LAMPP_LED_biru    D5
+// #define LAMPP_LED_kuning  D5
+// #define LAMPP_BTN_SETUP   D5
+
 
 String lampp_activeTopic[20];
 char lampp_valTopic[20];
@@ -210,6 +224,14 @@ int lampp_index_saat_ini = 0;
 // BED AND TOILET VARIABLE
 ///////////////////////////////////////////////
 
+
+// // BED DEMO
+// #define BED_PIN_ASSIST D2
+// #define BED_PIN_INFUS D6
+// #define BED_PIN_EMERGENCY D7
+// #define BED_PIN_CANCEL D5
+// #define BED_LED_CANCEL D3
+
 #define BED_PIN_ASSIST 4 // D2
 #define BED_PIN_INFUS 12 // D6
 #define BED_PIN_EMERGENCY 13 // D7
@@ -218,7 +240,7 @@ int lampp_index_saat_ini = 0;
 
 Tombol btn_assist(BED_PIN_ASSIST, BUZZER);
 Tombol btn_infus(BED_PIN_INFUS, BUZZER);
-Tombol btn_emergency(BED_PIN_EMERGENCY, BUZZER);
+Tombol btn_emergency(BED_PIN_EMERGENCY, BUZZER, LOW, 0);
 Tombol btn_cancel(BED_PIN_CANCEL, BUZZER);
 
 String MQTT_PUB_EMERGENCY;
@@ -280,14 +302,13 @@ const char saved[] PROGMEM = R"rawliteral(
 
     <form action="/wifi" method="post" style="display: flex; flex-direction: column; padding: 20px; max-width: 400px; margin: auto; background-color: #f7f7f7; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
       <label for="device" style="margin-bottom: 5px; font-weight: bold;">Device:</label>
-      <!--
       <select name="device" id="device" style="margin-bottom: 15px; padding: 8px; border-radius: 5px; border: 1px solid #ccc;">
         <option value="">NOT REGISTERED</option>
         <option value="BED">BED</option>
         <option value="TOILET">TOILET</option>
         <option value="LAMPP">LAMPP</option>
       </select>
-      -->
+      
 
     <!--
       <label for="nursestation" style="margin-bottom: 5px; font-weight: bold;">Nurse Station:</label>
@@ -327,7 +348,7 @@ const char saved[] PROGMEM = R"rawliteral(
             document.getElementById("ssid").value = dataForm.ssid;
             // document.getElementById("password").value = dataForm.password;
             document.getElementById("id").value = dataForm.id;
-            // document.getElementById("device").value = dataForm.device;
+            document.getElementById("device").value = dataForm.device;
             // document.getElementById("nursestation").value = dataForm.nursestation;
             document.getElementById("ip").value = dataForm.ip;
           }
@@ -564,8 +585,10 @@ void onMqttMessage(char *topic, char *payload, AsyncMqttClientMessageProperties 
           Serial.println("=======================");
           Serial.println("NEW DATA");
         }
-        pushTopic(topic, payload[0]);
-        lampp_newData = true;
+        if(payload[0] != 'p') {
+          pushTopic(topic, payload[0]);
+          lampp_newData = true;
+        }
       }
     }
   }
@@ -795,13 +818,13 @@ void setup() {
 
   int analogDeviceType = analogRead(ANALOGPIN);
 
-  if (analogDeviceType < 255){
-    DEVICE_TYPE = "LAMPP";
-  } else if (analogDeviceType > 750) {
-    DEVICE_TYPE = "BED";
-  } else {
-    DEVICE_TYPE = "TOILET";
-  }
+  // if (analogDeviceType < 255){
+  //   DEVICE_TYPE = "LAMPP";
+  // } else if (analogDeviceType > 750) {
+  //   DEVICE_TYPE = "BED";
+  // } else {
+  //   DEVICE_TYPE = "TOILET";
+  // }
 
   btn_setup.begin();
   btn_setup.onValidClick(modeAP);
@@ -819,8 +842,8 @@ void setup() {
     btn_infus.onValidClick(onInfusClicked);
     btn_emergency.onValidClick(onEmergencyClicked);
     btn_cancel.onValidClick(onCancelClicked);
-    // btn_cancel.onHold30s(on30sClicked);
-    // btn_emergency.onHold10s(on10sClicked);
+    btn_cancel.onHold30s(on30sClicked);
+    btn_emergency.onHold10s(on10sClicked);
 
     MQTT_PUB_EMERGENCY = "bed/" + id;
     MQTT_PUB_INFUS = "infus/" + id;
@@ -1323,8 +1346,6 @@ String httpGETRequest(String serverName) {
   }
   // Free resources
   http.end();
-
-  Serial.println(payload);
 
   return payload;
 }
