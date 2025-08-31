@@ -184,17 +184,25 @@ DynamicJsonDocument doc(1024);
 
 #define BUZZER    2
 #define ANALOGPIN A0
-#define BTN_SETUP D1
+// #define BTN_SETUP D1
+#define BTN_SETUP 14
 
 Tombol btn_setup(BTN_SETUP, BUZZER);
 
 // LAMPP VARIABLE
 ////////////////////////////////////////////////
 
-#define LAMPP_LED_merah 	D6 
-#define LAMPP_LED_hijau 	D3
-#define LAMPP_LED_biru	  D2
-#define LAMPP_LED_kuning 	D7
+// #define LAMPP_LED_merah 	D6 
+// #define LAMPP_LED_hijau 	D3
+// #define LAMPP_LED_biru	  D2
+// #define LAMPP_LED_kuning 	D7
+// #define LAMPP_BTN_SETUP 	14 // D5
+
+//OLD
+#define LAMPP_LED_merah 	12 // D6
+#define LAMPP_LED_hijau 	0 // D3
+#define LAMPP_LED_biru	  4 // D2
+#define LAMPP_LED_kuning 	5 // D1
 #define LAMPP_BTN_SETUP 	14 // D5
 
 // // LAMPP DEMO 1
@@ -733,7 +741,7 @@ void writeFile(const char *path, const char *message) {
 
 String readFile(const char *path) {
   if(log_setup) {
-    Serial.printf("[SETUP] Reading file: %s\n", path);
+    Serial.printf("[SETUP] Reading file: %s", path);
   }
 
   File file = LittleFS.open(path, "r");
@@ -745,6 +753,9 @@ String readFile(const char *path) {
   }
 
   String data = file.readString();
+  if(log_setup) {
+    Serial.println(data);
+  }
   file.close();
   return data;
 }
@@ -826,9 +837,6 @@ void setup() {
   //   DEVICE_TYPE = "TOILET";
   // }
 
-  btn_setup.begin();
-  btn_setup.onValidClick(modeAP);
-
   if (DEVICE_TYPE == "BED") {
 
     pinMode(BED_LED_CANCEL, OUTPUT);
@@ -864,12 +872,20 @@ void setup() {
 
   } else if (DEVICE_TYPE == "LAMPP") {
 
+    btn_setup.begin();
+    btn_setup.onValidClick(modeAP);
+
     pinMode(LAMPP_LED_merah, OUTPUT);
     pinMode(LAMPP_LED_kuning, OUTPUT);
     pinMode(LAMPP_LED_hijau, OUTPUT);
     pinMode(LAMPP_LED_biru, OUTPUT);
 
-  } 
+  }  else {
+    
+    btn_setup.begin();
+    btn_setup.onValidClick(modeAP);
+
+  }
 
   if(ssid == ""){
     ssid = "tidak boleh kosong";
@@ -999,7 +1015,6 @@ void setup() {
 
 void loop() {
   // put your main code here, to run repeatedly:
-  btn_setup.update();
 
   if(DEVICE_TYPE == "BED") {
     ONEWAY_DEVICE();
@@ -1032,6 +1047,7 @@ void loop() {
     if(millis() - timeout_ap > 300000) {
       ESP.restart();
     }
+
   }
 
   if(waiting_to_setup) {
@@ -1243,6 +1259,8 @@ void TOILET_DEVICE() {
 
 
 void LAMPP() {
+
+  btn_setup.update();
 
   if(lampp_newData) {
     if(lampp_valTopic[lampp_countTopic - 1] == 'e' && lampp_activeTopic[lampp_countTopic - 1][0] == 'b') {
